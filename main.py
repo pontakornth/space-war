@@ -118,8 +118,7 @@ class SpaceGame(GameApp):
         self.score_wait = 0
         self.score = StatusWithText(self, 100, 20, 'Score: %d', 0)
 
-        self.bomb_power = StatusWithText(self, 700, 20, 'Power: %d%%', 0)
-        self.bomb_power.value = BOMB_FULL_POWER
+
         self.bomb_canvas_id = None
         self.bomb_wait = 0
 
