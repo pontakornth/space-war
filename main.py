@@ -120,6 +120,7 @@ class SpaceGame(GameApp):
 
         self.bomb_power = StatusWithText(self, 700, 20, 'Power: %d%%', 0)
         self.bomb_power.value = BOMB_FULL_POWER
+        self.bomb_canvas_id = None
         self.bomb_wait = 0
 
         self.elements.append(self.ship)
@@ -151,22 +152,28 @@ class SpaceGame(GameApp):
     def bullet_count(self):
         return len(self.bullets)
 
+    def create_bomb(self):
+        self.bomb_canvas_id = self.canvas.create_oval(
+            self.ship.x - BOMB_RADIUS,
+            self.ship.y - BOMB_RADIUS,
+            self.ship.x + BOMB_RADIUS,
+            self.ship.y + BOMB_RADIUS
+        )
+
+    def destroy_bomb(self):
+        self.canvas.delete(self.bomb_canvas_id)
+
+    def destroy_enemies_in_bomb(self):
+        for e in self.enemies:
+            if self.ship.distance_to(e) <= BOMB_RADIUS:
+                e.to_be_deleted = True
+
     def bomb(self):
         if self.bomb_power.value == BOMB_FULL_POWER:
             self.bomb_power.value = 0
-
-            self.bomb_canvas_id = self.canvas.create_oval(
-                self.ship.x - BOMB_RADIUS,
-                self.ship.y - BOMB_RADIUS,
-                self.ship.x + BOMB_RADIUS,
-                self.ship.y + BOMB_RADIUS
-            )
-
-            self.after(200, lambda: self.canvas.delete(self.bomb_canvas_id))
-
-            for e in self.enemies:
-                if self.ship.distance_to(e) <= BOMB_RADIUS:
-                    e.to_be_deleted = True
+            self.create_bomb()
+            self.after(200, self.destroy_bomb)
+            self.destroy_enemies_in_bomb()
 
     def update_level(self):
         self.level.value += 1
