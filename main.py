@@ -1,4 +1,5 @@
 import math
+import sys
 from random import randint, random
 
 import tkinter as tk
@@ -13,6 +14,11 @@ from utils import random_edge_position, normalize_vector, direction_to_dxdy, vec
 class SpaceGame(GameApp):
     def init_game(self):
         self.ship = Ship(self, CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2)
+
+        # Debugging: Avoid death
+        # This is a bad practice. GameApp should not access argument.
+        # TODO: Refactor this
+        self.is_debugging  = len(sys.argv) >= 2
 
         self.level = 1
         self.level_text = Text(self, '', 100, 580)
@@ -152,7 +158,8 @@ class SpaceGame(GameApp):
         return new_list
 
     def post_update(self):
-        self.process_collisions()
+        if not self.is_debugging:
+            self.process_collisions()
 
         self.bullets = self.update_and_filter_deleted(self.bullets)
         self.enemies = self.update_and_filter_deleted(self.enemies)
