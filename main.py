@@ -113,9 +113,6 @@ class SpaceGame(GameApp):
         # TODO: Refactor this
         self.is_debugging = len(sys.argv) >= 2
 
-        # self.level = 1
-        # self.level_text = Text(self, '', 100, 580)
-        # self.update_level_text()
         self.level = StatusWithText(self, 100, 580, 'Level: %d', 1)
 
         self.score_wait = 0
