@@ -1,6 +1,7 @@
 import math
 import sys
 from random import randint, random
+from abc import ABC, abstractmethod
 
 import tkinter as tk
 
@@ -11,6 +12,39 @@ from elements import Ship, Bullet, Enemy
 from utils import random_edge_position, normalize_vector, direction_to_dxdy, vector_len, distance
 
 
+class EnemyGenerationStrategy(ABC):
+    @abstractmethod
+    def generate(self, space_game, ship):
+        pass
+
+class StarEnemyGenerationStrategy(EnemyGenerationStrategy):
+    def generate(self, space_game, ship):
+        enemies = []
+
+        x = randint(100, CANVAS_WIDTH - 100)
+        y = randint(100, CANVAS_HEIGHT - 100)
+
+        while vector_len(x - ship.x, y - ship.y) < 200:
+            x = randint(100, CANVAS_WIDTH - 100)
+            y = randint(100, CANVAS_HEIGHT - 100)
+
+        for d in range(18):
+            dx, dy = direction_to_dxdy(d * 20)
+            enemy = Enemy(space_game, x, y, dx * ENEMY_BASE_SPEED, dy * ENEMY_BASE_SPEED)
+            enemies.append(enemy)
+
+        return enemies
+
+class EdgeEnemyGenerationStrategy(EnemyGenerationStrategy):
+    def generate(self, space_game, ship):
+        x, y = random_edge_position()
+        vx, vy = normalize_vector(ship.x - x, ship.y - y)
+
+        vx *= ENEMY_BASE_SPEED
+        vy *= ENEMY_BASE_SPEED
+        enemy = Enemy(space_game, x, y, vx, vy)
+        return [enemy]
+
 class SpaceGame(GameApp):
     def init_game(self):
         self.ship = Ship(self, CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2)
@@ -18,7 +52,7 @@ class SpaceGame(GameApp):
         # Debugging: Avoid death
         # This is a bad practice. GameApp should not access argument.
         # TODO: Refactor this
-        self.is_debugging  = len(sys.argv) >= 2
+        self.is_debugging = len(sys.argv) >= 2
 
         self.level = 1
         self.level_text = Text(self, '', 100, 580)
@@ -35,6 +69,11 @@ class SpaceGame(GameApp):
         self.update_bomb_power_text()
 
         self.elements.append(self.ship)
+
+        self.enemy_creation_strategies = [
+            (0.2, StarEnemyGenerationStrategy()),
+            (1.0, EdgeEnemyGenerationStrategy()),
+        ]
 
         self.enemies = []
         self.bullets = []
@@ -53,9 +92,9 @@ class SpaceGame(GameApp):
             self.bomb_power = 0
 
             self.bomb_canvas_id = self.canvas.create_oval(
-                self.ship.x - BOMB_RADIUS, 
+                self.ship.x - BOMB_RADIUS,
                 self.ship.y - BOMB_RADIUS,
-                self.ship.x + BOMB_RADIUS, 
+                self.ship.x + BOMB_RADIUS,
                 self.ship.y + BOMB_RADIUS
             )
 
@@ -90,39 +129,13 @@ class SpaceGame(GameApp):
             self.bomb_wait = 0
             self.update_bomb_power_text()
 
-    def create_enemy_star(self):
-        enemies = []
-
-        x = randint(100, CANVAS_WIDTH - 100)
-        y = randint(100, CANVAS_HEIGHT - 100)
-
-        while vector_len(x - self.ship.x, y - self.ship.y) < 200:
-            x = randint(100, CANVAS_WIDTH - 100)
-            y = randint(100, CANVAS_HEIGHT - 100)
-
-        for d in range(18):
-            dx, dy = direction_to_dxdy(d * 20)
-            enemy = Enemy(self, x, y, dx * ENEMY_BASE_SPEED, dy * ENEMY_BASE_SPEED)
-            enemies.append(enemy)
-
-        return enemies
-
-    def create_enemy_from_edges(self):
-        x, y = random_edge_position()
-        vx, vy = normalize_vector(self.ship.x - x, self.ship.y - y)
-
-        vx *= ENEMY_BASE_SPEED
-        vy *= ENEMY_BASE_SPEED
-
-        enemy = Enemy(self, x, y, vx, vy)
-        return [enemy]
-
     def create_enemies(self):
-        if random() < 0.2:
-            enemies = self.create_enemy_star()
-        else:
-            enemies = self.create_enemy_from_edges()
-
+        p = random()
+        enemies = []
+        for prob, strategy in self.enemy_creation_strategies:
+            if p < prob:
+                enemies = strategy.generate(self, self.ship)
+                break
         for e in enemies:
             self.add_enemy(e)
 
@@ -187,7 +200,7 @@ class SpaceGame(GameApp):
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Space Fighter")
- 
+
     # do not allow window resizing
     root.resizable(False, False)
     app = SpaceGame(root, CANVAS_WIDTH, CANVAS_HEIGHT, UPDATE_DELAY)
