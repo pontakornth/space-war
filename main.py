@@ -114,6 +114,7 @@ class SpaceGame(GameApp):
         self.is_debugging = len(sys.argv) >= 2
 
         self.level = StatusWithText(self, 100, 580, 'Level: %d', 1)
+        self.level_wait = 0
 
         self.score_wait = 0
         self.score = StatusWithText(self, 100, 20, 'Score: %d', 0)
@@ -124,14 +125,19 @@ class SpaceGame(GameApp):
 
         self.elements.append(self.ship)
 
-        self.enemy_creation_strategies = [
-            (0.2, StarEnemyGenerationStrategy()),
-            (1.0, EdgeEnemyGenerationStrategy()),
-        ]
         self.init_key_handlers()
 
         self.enemies = []
         self.bullets = []
+
+    def create_strategies(self):
+        return [
+            # Formula 0.2 + level/100
+            # Ex. Level 1 = 0.2 + 1/100 == 0.21
+            # Note: Floating point error is not taken in account
+            (min(0.2 + (self.level.value / 100), 0.3), StarEnemyGenerationStrategy()),
+            (1.0, EdgeEnemyGenerationStrategy())
+        ]
 
     def init_key_handlers(self):
         key_pressed_handler = ShipMovementKeyPressedHandler(self, self.ship)
@@ -175,7 +181,10 @@ class SpaceGame(GameApp):
             self.destroy_enemies_in_bomb()
 
     def update_level(self):
-        self.level.value += 1
+        self.level_wait += 1
+        if self.level_wait >= LEVEL_WAIT:
+            self.level.value += 1
+            self.level_wait = 0
 
     def update_score(self):
         self.score_wait += 1
@@ -192,7 +201,7 @@ class SpaceGame(GameApp):
     def create_enemies(self):
         p = random()
         enemies = []
-        for prob, strategy in self.enemy_creation_strategies:
+        for prob, strategy in self.create_strategies():
             if p < prob:
                 enemies = strategy.generate(self, self.ship)
                 break
@@ -239,6 +248,9 @@ class SpaceGame(GameApp):
 
         self.update_score()
         self.update_bomb_power()
+
+        if self.score.value % 20 == 0:
+            self.update_level()
 
 
 if __name__ == "__main__":
